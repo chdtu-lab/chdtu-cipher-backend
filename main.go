@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -78,13 +77,19 @@ func atbashHandler(writer http.ResponseWriter, request *http.Request) {
 
 func caesarHandler(writer http.ResponseWriter, request *http.Request) {
 	enableCors(&writer)
-	fmt.Println("GET params were:", request.URL.Query())
-	text := request.URL.Query().Get("text")
-	key := request.URL.Query().Get("key")
-	ikey, _ := strconv.Atoi(key)
-	caesarText := EncryptPlaintext(text, ikey)
-	resp, _ := json.Marshal(CaesarText{caesarText})
-	writer.Write(resp)
+	query := request.URL.Query()
+	text := query.Get("text")
+	key, _ := strconv.Atoi(query.Get("key"))
+	encrypt, _ := strconv.ParseBool(query.Get("encrypt"))
+	if encrypt {
+		caesarText := EncryptPlaintext(text, key)
+		resp, _ := json.Marshal(CaesarText{caesarText})
+		writer.Write(resp)
+	} else {
+		caesarText := DecryptCiphertext(text, key)
+		resp, _ := json.Marshal(CaesarText{caesarText})
+		writer.Write(resp)
+	}
 }
 
 func enableCors(w *http.ResponseWriter) {
