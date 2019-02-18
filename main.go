@@ -17,47 +17,32 @@ type CaesarText struct {
 	Text string `json:"text"`
 }
 
-type Caesar struct {
-	key int
+const lowerCaseAlphabet = "abcdefghijklmnopqrstuvwxyz"
+const upperCaseAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// Encrypts a plaintext string by shifting each character with the provided key.
+func EncryptPlaintext(plaintext string, key int) string {
+	return rotateText(plaintext, key)
 }
 
-func NewCaesar(key int) *Caesar {
-	return &Caesar{key}
+// Decrypts a ciphertext string by reverse shifting each character with the provided key.
+func DecryptCiphertext(ciphertext string, key int) string {
+	return rotateText(ciphertext, -key)
 }
 
-// Encipher enciphers string using Caesar cipher according to key.
-func (c *Caesar) Encipher(text string) string {
-	return caesarEncipher(text, c.key)
-}
+// Takes a string and rotates each character by the provided amount.
+func rotateText(inputText string, rot int) string {
+	rot %= 26
+	rotatedText := []byte(inputText)
 
-// Decipher deciphers string using Caesar cipher according to key.
-func (c *Caesar) Decipher(text string) string {
-	return caesarEncipher(text, -c.key)
-}
-
-func caesarEncipher(text string, key int) string {
-	if key == 0 {
-		return text
-	}
-	return mapAlpha(text, func(i, char int) int {
-		return char + key
-	})
-}
-
-func mod(a int, b int) int {
-	return (a%b + b) % b
-}
-
-func mapAlpha(text string, f func(i, char int) int) string {
-	runes := []rune(text)
-	for i, char := range runes {
-		if char >= 'A' && char <= 'Z' {
-			runes[i] = rune(mod(f(i, int(char-'A')), 26)) + 'A'
-		} else if char >= 'a' && char <= 'z' {
-			runes[i] = rune(mod(f(i, int(char-'a')), 26)) + 'a'
+	for index, byteValue := range rotatedText {
+		if byteValue >= 'a' && byteValue <= 'z' {
+			rotatedText[index] = lowerCaseAlphabet[(int((26+(byteValue-'a')))+rot)%26]
+		} else if byteValue >= 'A' && byteValue <= 'Z' {
+			rotatedText[index] = upperCaseAlphabet[(int((26+(byteValue-'A')))+rot)%26]
 		}
 	}
-	return string(runes)
+	return string(rotatedText)
 }
 
 func main() {
@@ -97,8 +82,8 @@ func caesarHandler(writer http.ResponseWriter, request *http.Request) {
 	text := request.URL.Query().Get("text")
 	key := request.URL.Query().Get("key")
 	ikey, _ := strconv.Atoi(key)
-	caesarText := CaesarText{NewCaesar(ikey).Encipher(text)}
-	resp, _ := json.Marshal(caesarText)
+	caesarText := EncryptPlaintext(text, ikey)
+	resp, _ := json.Marshal(CaesarText{caesarText})
 	writer.Write(resp)
 }
 
