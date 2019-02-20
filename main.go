@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type Atbash struct {
@@ -16,32 +17,42 @@ type CaesarText struct {
 	Text string `json:"text"`
 }
 
-const lowerCaseAlphabet = "abcdefghijklmnopqrstuvwxyz"
-const upperCaseAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+func caesar(r rune, shift int) rune {
+	if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= 'А' && r <= 'Я' || r >= 'а' && r <= 'я' {
+		s := int(r) + shift
+		if r >= 'A' && r <= 'Z' {
 
-// Encrypts a plaintext string by shifting each character with the provided key.
-func EncryptPlaintext(plaintext string, key int) string {
-	return rotateText(plaintext, key)
-}
-
-// Decrypts a ciphertext string by reverse shifting each character with the provided key.
-func DecryptCiphertext(ciphertext string, key int) string {
-	return rotateText(ciphertext, -key)
-}
-
-// Takes a string and rotates each character by the provided amount.
-func rotateText(inputText string, rot int) string {
-	rot %= 26
-	rotatedText := []byte(inputText)
-
-	for index, byteValue := range rotatedText {
-		if byteValue >= 'a' && byteValue <= 'z' {
-			rotatedText[index] = lowerCaseAlphabet[(int((26+(byteValue-'a')))+rot)%26]
-		} else if byteValue >= 'A' && byteValue <= 'Z' {
-			rotatedText[index] = upperCaseAlphabet[(int((26+(byteValue-'A')))+rot)%26]
+			if s > 'Z' {
+				return rune(s - 26)
+			} else if s < 'A' {
+				return rune(s + 26)
+			}
+			return rune(s)
 		}
+		if r >= 'a' && r <= 'z' {
+			if s > 'z' {
+				return rune(s - 26)
+			} else if s < 'a' {
+				return rune(s + 26)
+			}
+		}
+		if r >= 'А' && r <= 'Я' {
+			if s > 'Я' {
+				return rune(s - 32)
+			} else if s < 'А' {
+				return rune(s + 32)
+			}
+		}
+		if r >= 'а' && r <= 'я' {
+			if s > 'я' {
+				return rune(s - 32)
+			} else if s < 'а' {
+				return rune(s + 32)
+			}
+		}
+		return rune(s)
 	}
-	return string(rotatedText)
+	return rune(r)
 }
 
 func main() {
@@ -82,11 +93,15 @@ func caesarHandler(writer http.ResponseWriter, request *http.Request) {
 	key, _ := strconv.Atoi(query.Get("key"))
 	encrypt, _ := strconv.ParseBool(query.Get("encrypt"))
 	if encrypt {
-		caesarText := EncryptPlaintext(text, key)
+		caesarText := strings.Map(func(r rune) rune {
+			return caesar(r, key)
+		}, text)
 		resp, _ := json.Marshal(CaesarText{caesarText})
 		writer.Write(resp)
 	} else {
-		caesarText := DecryptCiphertext(text, key)
+		caesarText := strings.Map(func(r rune) rune {
+			return caesar(r, -key)
+		}, text)
 		resp, _ := json.Marshal(CaesarText{caesarText})
 		writer.Write(resp)
 	}
